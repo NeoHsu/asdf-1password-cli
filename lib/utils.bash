@@ -2,10 +2,9 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for 1password-cli.
-GH_REPO="https://github.com/1Password"
 TOOL_NAME="1password-cli"
 TOOL_TEST="op --version"
+TOOL_GPG_KEY="3FEF9748469ADBE15DA7CA80AC2D62742012EA22"
 
 fail() {
   echo -e "asdf-$TOOL_NAME: $*"
@@ -14,38 +13,33 @@ fail() {
 
 curl_opts=(-fsSL)
 
-# NOTE: You might want to remove this if 1password-cli is not hosted on GitHub releases.
-if [ -n "${GITHUB_API_TOKEN:-}" ]; then
-  curl_opts=("${curl_opts[@]}" -H "Authorization: token $GITHUB_API_TOKEN")
-fi
-
 sort_versions() {
   sed 'h; s/[+-]/./g; s/.p\([[:digit:]]\)/.z\1/; s/$/.z/; G; s/\n/ /' |
     LC_ALL=C sort -t. -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n | awk '{print $2}'
 }
 
-list_github_tags() {
-  git ls-remote --tags --refs "$GH_REPO" |
-    grep -o 'refs/tags/.*' | cut -d/ -f3- |
-    sed 's/^v//' # NOTE: You might want to adapt this sed to remove non-version strings from tags
-}
-
 list_all_versions() {
-  # TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-  # Change this function if 1password-cli has other means of determining installable versions.
-  list_github_tags
+  curl -s https://app-updates.agilebits.com/product_history/CLI |
+    sed -n '/<h3/{n;p;}' |
+    sed 's/[[:space:]]//g'
 }
 
 download_release() {
   local version filename url
   version="$1"
   filename="$2"
+  platform=$(get_platform)
+  arch=$(get_arch)
+  ext="zip"
 
-  # TODO: Adapt the release URL convention for 1password-cli
-  url="$GH_REPO/archive/v${version}.tar.gz"
+  case $platform in
+    darwin) ext="pkg" ;;
+  esac
+
+  url="https://cache.agilebits.com/dist/1P/op/pkg/v${version}/op_${platform}_${arch}_v${version}.${ext}"
 
   echo "* Downloading $TOOL_NAME release $version..."
-  curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
+  curl "${curl_opts[@]}" -o "$filename.${ext}" -C - "$url" || fail "Could not download $url"
 }
 
 install_version() {
@@ -58,10 +52,26 @@ install_version() {
   fi
 
   (
-    mkdir -p "$install_path"
-    cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"
+    platform=$(get_platform)
+    mkdir -p "$install_path/bin"
+    case $platform in
+      darwin)
+        ext="pkg"
+        sudo installer -pkg "$ASDF_DOWNLOAD_PATH/$TOOL_NAME-$ASDF_INSTALL_VERSION.pkg" -target "$install_path/bin"
+        sudo mv "/usr/local/bin/op" "$install_path/bin/"
+        sudo chown -R $USER:$USER "$install_path/bin/*"
+        ;;
+      *)
+        cp -R "$ASDF_DOWNLOAD_PATH/." "$install_path/bin"
+        is_exists=$(program_exists)
+        echo $is_exists
+        if [ "$is_exists" != 0 ]; then
+          gpg --receive-keys "$TOOL_GPG_KEY"
+          gpg --verify "$install_path/bin/op.sig" "$install_path/bin/op" || fail "asdf-$TOOL_NAME download file verify fail with GPG."
+        fi
+        ;;
+    esac
 
-    # TODO: Asert 1password-cli executable exists.
     local tool_cmd
     tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
     test -x "$install_path/bin/$tool_cmd" || fail "Expected $install_path/bin/$tool_cmd to be executable."
@@ -71,4 +81,48 @@ install_version() {
     rm -rf "$install_path"
     fail "An error ocurred while installing $TOOL_NAME $version."
   )
+}
+
+get_arch() {
+  local arch=""
+
+  case "$(uname -m)" in
+    x86_64 | amd64) arch="amd64" ;;
+    i686 | i386) arch="386" ;;
+    armv6l | armv7l) arch="arm" ;;
+    aarch64 | arm64) arch="arm64" ;;
+    *)
+      fail "Arch '$(uname -m)' not supported!"
+      ;;
+  esac
+
+  echo -n $arch
+}
+
+get_platform() {
+  local platform=""
+
+  case "$(uname | tr '[:upper:]' '[:lower:]')" in
+    darwin) platform="darwin" ;;
+    freebsd) platform="freebsd" ;;
+    linux) platform="linux" ;;
+    openbsd) platform="openbsd" ;;
+    windows) platform="windows" ;;
+    *)
+      fail "Platform '$(uname -m)' not supported!"
+      ;;
+  esac
+
+  echo -n $platform
+}
+
+program_exists() {
+  local ret='0'
+  command -v gpg gpg2 >/dev/null 2>&1 || { local ret='1'; }
+
+  if [ "$ret" -ne 0 ]; then
+    return 1
+  fi
+
+  return 0
 }
