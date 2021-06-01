@@ -6,6 +6,10 @@
 
 </div>
 
+## Build History
+
+[![Build history](https://buildstats.info/github/chart/NeoHsu/asdf-1password-cli?branch=master)](https://github.com/NeoHsu/asdf-1password-cli/actions)
+
 # Contents
 
 - [Dependencies](#dependencies)
@@ -16,8 +20,8 @@
 
 # Dependencies
 
-- `bash`, `curl`, `tar`: generic POSIX utilities.
-- `SOME_ENV_VAR`: set this environment variable in your shell config to load the correct version of tool x.
+- `bash`, `curl`, `unzip`: generic POSIX utilities.
+- `gpg`, `gpg2`: (Option) if you want to verify 1password-cli installer with GPG.
 
 # Install
 
