@@ -66,7 +66,7 @@ install_version() {
         is_exists=$(program_exists)
         echo $is_exists
         if [ "$is_exists" != 0 ]; then
-          gpg --receive-keys "$TOOL_GPG_KEY"
+          gpg --keyserver keyserver.ubuntu.com --receive-keys "$TOOL_GPG_KEY"
           gpg --verify "$install_path/bin/op.sig" "$install_path/bin/op" || fail "asdf-$TOOL_NAME download file verify fail with GPG."
         fi
         ;;
