@@ -6,6 +6,8 @@ on:
   push:
     paths-ignore:
       - "**.md"
+  schedule:
+    - cron: 0 0 * * 1
 
 jobs:
   plugin_test:

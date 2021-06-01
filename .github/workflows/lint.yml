@@ -9,18 +9,19 @@ on:
 
 jobs:
   lint:
-    name: Shellcheck and Shell Format
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: asdf_install
-        uses: asdf-vm/actions/install@v1
-        with:
-          before_install: bash -c '${ASDF_DATA_DIR:=$HOME/.asdf}/plugins/nodejs/bin/import-release-team-keyring'
-      - name: Shellcheck
-        run: shellcheck -x bin/* -P lib/
-      - name: Shell Format - List files to check
-        run: shfmt -f .
-      - name: Shell Format - Validate
+      - name: Run ShellCheck
+        run: shellcheck -x bin/*
+
+  format:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install shfmt
+        run: brew install shfmt
+      - name: Run shfmt
         run: shfmt -d -i 2 -ci .
