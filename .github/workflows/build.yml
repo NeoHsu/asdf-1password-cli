@@ -7,7 +7,7 @@ on:
     paths-ignore:
       - "**.md"
   schedule:
-    - cron: 0 0 * * 1
+    - cron: 0 0 * * *
 
 jobs:
   plugin_test:
