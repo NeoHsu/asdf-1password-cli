@@ -31,13 +31,16 @@ download_release() {
   platform=$(get_platform)
   arch=$(get_arch)
   ext="zip"
+  filter_platform=$platform
 
   case $platform in
-    darwin) ext="pkg" ;;
+    darwin)
+      ext="pkg"
+      filter_platform="apple\|darwin"
+      ;;
   esac
 
-  url="https://cache.agilebits.com/dist/1P/op/pkg/v${version}/op_${platform}_${arch}_v${version}.${ext}"
-
+  url=$(curl -s https://app-updates.agilebits.com/product_history/CLI | grep ${version} | grep ${filter_platform} | grep ${arch} | sed -e 's/<a /\n<a /g' | sed -e 's/<a .*href=['"'"'"]//' -e 's/["'"'"'].*$//' -e '/^$/ d' | sed '/^[[:space:]]*$/d')
   echo "* Downloading $TOOL_NAME release $version..."
   curl "${curl_opts[@]}" -o "$filename.${ext}" -C - "$url" || fail "Could not download $url"
 }
