@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.0.1](https://www.github.com/NeoHsu/asdf-1password-cli/compare/v1.0.0...v1.0.1) (2021-08-11)
+
+
+### Bug Fixes
+
+* **download:** changed download URL that parse from 1Password website ([d3e944d](https://www.github.com/NeoHsu/asdf-1password-cli/commit/d3e944db84926b095ca056dba3880c2973644904))
+
 ## 1.0.0 (2021-07-18)
 
 
