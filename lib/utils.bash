@@ -37,10 +37,11 @@ download_release() {
     darwin)
       ext="pkg"
       filter_platform="apple\|darwin"
+      arch="${arch}\|universal"
       ;;
   esac
 
-  url=$(curl -s https://app-updates.agilebits.com/product_history/CLI | grep ${version} | grep ${filter_platform} | grep ${arch} | sed -e 's/<a /\n<a /g' | sed -e 's/<a .*href=['"'"'"]//' -e 's/["'"'"'].*$//' -e '/^$/ d' | sed '/^[[:space:]]*$/d')
+  url=$(curl -s https://app-updates.agilebits.com/product_history/CLI | grep "${version}" | grep "${filter_platform}" | grep "${arch}" | sed -e 's/<a /\n<a /g' | sed -e 's/<a .*href=['"'"'"]//' -e 's/["'"'"'].*$//' -e '/^$/ d' | sed '/^[[:space:]]*$/d' | grep -o "https.*$")
   echo "* Downloading $TOOL_NAME release $version..."
   curl "${curl_opts[@]}" -o "$filename.${ext}" -C - "$url" || fail "Could not download $url"
 }
@@ -60,9 +61,8 @@ install_version() {
     case $platform in
       darwin)
         ext="pkg"
-        sudo installer -pkg "$ASDF_DOWNLOAD_PATH/$TOOL_NAME-$ASDF_INSTALL_VERSION.pkg" -target "$install_path/bin"
-        sudo mv "/usr/local/bin/op" "$install_path/bin/"
-        sudo chown -R $USER:$USER "$install_path/bin/*"
+        pkgutil --expand "${ASDF_DOWNLOAD_PATH}/${TOOL_NAME}-${ASDF_INSTALL_VERSION}.${ext}" "${ASDF_DOWNLOAD_PATH}/extracted/"
+        tar -xzf "$ASDF_DOWNLOAD_PATH/extracted/op.${ext}/Payload" -C "$install_path/bin"
         ;;
       *)
         cp -R "$ASDF_DOWNLOAD_PATH/." "$install_path/bin"
