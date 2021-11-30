@@ -4,10 +4,10 @@ on:
     paths-ignore:
       - "**.md"
   push:
+    branches:
+      - master
     paths-ignore:
       - "**.md"
-  schedule:
-    - cron: 0 0 * * *
 
 jobs:
   plugin_test:
@@ -18,6 +18,28 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: asdf_plugin_test
-        uses: asdf-vm/actions/plugin-test@v1
+        uses: asdf-vm/actions/plugin-test@v1.1.0
         with:
           command: op --version
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          path: 1password-cli
+      - name: Move 1password-cli plugin to plugins dir
+        run: |
+          mkdir -p ${HOME}/.asdf/plugins/
+          mv 1password-cli ${HOME}/.asdf/plugins/
+      - name: Run 1password-cli specific tests
+        run: |
+          echo "Trying to list all versions of 1password-cli"
+          asdf list all 1password-cli
+          echo "Will try to install 1password-cli 1.11.0 (Last version with amd64 for MacOS)"
+          asdf install 1password-cli 1.11.0
+          echo "Will try to install 1password-cli 1.11.1 (First version with universal for MacOS)"
+          asdf install 1password-cli 1.11.1
+          echo "Setting 1password-cli version 1.11.0 as the default value in ~/.tool-versions"
+          echo '1password-cli 1.11.0' > ~/.tool-versions
+          op --version 2>&1 | grep '1.11.0'
+          echo "Setting 1password-cli version 1.11.1 as the default value in ~/.tool-versions"
+          echo '1password-cli 1.11.1' > ~/.tool-versions
+          op --version 2>&1 | grep '1.11.1'
