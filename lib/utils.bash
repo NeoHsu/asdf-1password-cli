@@ -19,9 +19,13 @@ sort_versions() {
 }
 
 list_all_versions() {
-  curl -s https://app-updates.agilebits.com/product_history/CLI |
-    sed -n '/<h3/{n;p;}' |
-    sed 's/[[:space:]]//g'
+  cat \
+    <(curl -s https://app-updates.agilebits.com/product_history/CLI |
+      sed -n '/<h3/{n;p;}' |
+      sed 's/[[:space:]]//g') \
+    <(curl -s https://app-updates.agilebits.com/product_history/CLI2 |
+      sed -n '/<h3/{n;p;}' |
+      sed 's/[[:space:]]//g')
 }
 
 download_release() {
@@ -41,7 +45,11 @@ download_release() {
       ;;
   esac
 
-  url=$(curl -s https://app-updates.agilebits.com/product_history/CLI | grep "${version}" | grep "${filter_platform}" | grep "${arch}" | sed -e 's/<a /\n<a /g' | sed -e 's/<a .*href=['"'"'"]//' -e 's/["'"'"'].*$//' -e '/^$/ d' | sed '/^[[:space:]]*$/d' | grep -o "https.*$")
+  if [[ "$version" =~ ^1\..*$ ]]; then
+    url=$(curl -s https://app-updates.agilebits.com/product_history/CLI | grep "${version}" | grep "${filter_platform}" | grep "${arch}" | sed -e 's/<a /\n<a /g' | sed -e 's/<a .*href=['"'"'"]//' -e 's/["'"'"'].*$//' -e '/^$/ d' | sed '/^[[:space:]]*$/d' | grep -o "https.*$")
+  elif [[ "$version" =~ ^2\..*$ ]]; then
+    url=$(curl -s https://app-updates.agilebits.com/product_history/CLI2 | grep "${version}\/" | grep "${filter_platform}" | grep "${arch}" | sed -e 's/<a /\n<a /g' | sed -e 's/<a .*href=['"'"'"]//' -e 's/["'"'"'].*$//' -e '/^$/ d' | sed '/^[[:space:]]*$/d' | grep -o "https.*$")
+  fi
   echo "* Downloading $TOOL_NAME release $version..."
   curl "${curl_opts[@]}" -o "$filename.${ext}" -C - "$url" || fail "Could not download $url"
 }
@@ -62,7 +70,9 @@ install_version() {
       darwin)
         ext="pkg"
         pkgutil --expand "${ASDF_DOWNLOAD_PATH}/${TOOL_NAME}-${ASDF_INSTALL_VERSION}.${ext}" "${ASDF_DOWNLOAD_PATH}/extracted/"
-        tar -xzf "$ASDF_DOWNLOAD_PATH/extracted/op.${ext}/Payload" -C "$install_path/bin"
+        pushd "$install_path/bin"
+        cpio -i -F "${ASDF_DOWNLOAD_PATH}/extracted/op.${ext}/Payload" 2>/dev/null
+        popd
         ;;
       *)
         cp -R "$ASDF_DOWNLOAD_PATH/." "$install_path/bin"
