@@ -46,10 +46,39 @@ download_release() {
   esac
 
   if [[ "$version" =~ ^1\..*$ ]]; then
-    url=$(curl -s https://app-updates.agilebits.com/product_history/CLI | grep "${version}" | grep "${filter_platform}" | grep "${arch}" | sed -e 's/<a /\n<a /g' | sed -e 's/<a .*href=['"'"'"]//' -e 's/["'"'"'].*$//' -e '/^$/ d' | sed '/^[[:space:]]*$/d' | grep -o "https.*$")
+    url=$(curl -s https://app-updates.agilebits.com/product_history/CLI)
   elif [[ "$version" =~ ^2\..*$ ]]; then
-    url=$(curl -s https://app-updates.agilebits.com/product_history/CLI2 | grep "${version}\/" | grep "${filter_platform}" | grep "${arch}" | sed -e 's/<a /\n<a /g' | sed -e 's/<a .*href=['"'"'"]//' -e 's/["'"'"'].*$//' -e '/^$/ d' | sed '/^[[:space:]]*$/d' | grep -o "https.*$")
+    url=$(curl -s https://app-updates.agilebits.com/product_history/CLI2)
   fi
+
+  # Limit to version ${version}/
+  url=$(echo "${url}" | grep "${version}\/")
+
+  # Limit to ${filter_platform}
+  url=$(echo "${url}" | grep "${filter_platform}")
+
+  # Limit to architecture ${arch}
+  url=$(echo "${url}" | grep "${arch}")
+
+  # Ensure each link is on its own line
+  url=$(echo "${url}" | sed -e "s/<a /\n<a /g")
+
+  # Strip off HTML
+  url=$(echo "${url}" | sed -e 's/<a .*href=['"'"'"]//' -e 's/["'"'"'].*$//' -e '/^$/ d')
+
+  # Lose extraneous spaces
+  url=$(echo "${url}" | sed '/^[[:space:]]*$/d')
+
+  # Require HTTPS
+  url=$(echo "${url}" | grep -o "https.*$")
+
+  # Expect only one line
+  if [[ $(echo "$url" | wc -l | tr -d ' ') != 1 ]]; then
+    echo "Unable to winnow down to a single URL:"
+    echo "$url"
+    exit 1
+  fi
+
   echo "* Downloading $TOOL_NAME release $version..."
   curl "${curl_opts[@]}" -o "$filename.${ext}" -C - "$url" || fail "Could not download $url"
 }
