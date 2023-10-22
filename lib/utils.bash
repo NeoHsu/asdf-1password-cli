@@ -64,6 +64,7 @@ download_release() {
   url=$(echo "${url}" | grep "\.${ext}")
 
   # Ensure each link is on its own line
+  # shellcheck disable=SC2001 # (bash 3.2.x parameter expansion can't handle newlines)
   url=$(echo "${url}" | sed -e "s/<a /\n<a /g")
 
   # Strip off HTML
@@ -109,7 +110,7 @@ install_version() {
       *)
         cp -R "$ASDF_DOWNLOAD_PATH/." "$install_path/bin"
         is_exists=$(program_exists)
-        echo $is_exists
+        echo "$is_exists"
         if [ "$is_exists" != 0 ]; then
           gpg --keyserver hkps://keyserver.ubuntu.com:443 --receive-keys "$TOOL_GPG_KEY"
           gpg --verify "$install_path/bin/op.sig" "$install_path/bin/op" || fail "asdf-$TOOL_NAME download file verify fail with GPG."
