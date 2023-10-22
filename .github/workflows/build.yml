@@ -33,13 +33,23 @@ jobs:
         run: |
           echo "Trying to list all versions of 1password-cli"
           asdf list all 1password-cli
-          echo "Will try to install 1password-cli 1.11.0 (Last version with amd64 for MacOS)"
+          echo "Will try to install 1password-cli 1.11.0 (Last version with amd64 for macOS)"
           asdf install 1password-cli 1.11.0
-          echo "Will try to install 1password-cli 1.11.1 (First version with universal for MacOS)"
+          echo "Will try to install 1password-cli 1.11.1 (First version with universal for macOS)"
           asdf install 1password-cli 1.11.1
+          echo "Will try to install 1password-cli 2.0.0 (First 2.0 version)"
+          asdf install 1password-cli 2.0.0
+          echo "Will try to install 1password-cli 2.2.0 (First version with zip and pkg versions for macOS)"
+          asdf install 1password-cli 2.2.0
           echo "Setting 1password-cli version 1.11.0 as the default value in ~/.tool-versions"
           echo '1password-cli 1.11.0' > ~/.tool-versions
           op --version 2>&1 | grep '1.11.0'
           echo "Setting 1password-cli version 1.11.1 as the default value in ~/.tool-versions"
           echo '1password-cli 1.11.1' > ~/.tool-versions
           op --version 2>&1 | grep '1.11.1'
+          echo "Setting 1password-cli version 2.0.0 as the default value in ~/.tool-versions"
+          echo '1password-cli 2.0.0' > ~/.tool-versions
+          op --version 2>&1 | grep '2.0.0'
+          echo "Setting 1password-cli version 2.2.0 as the default value in ~/.tool-versions"
+          echo '1password-cli 2.2.0' > ~/.tool-versions
+          op --version 2>&1 | grep '2.2.0'
