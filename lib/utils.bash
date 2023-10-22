@@ -60,6 +60,9 @@ download_release() {
   # Limit to architecture ${arch}
   url=$(echo "${url}" | grep "${arch}")
 
+  # Limit to trailing extension \.${ext} (not /${ext}/ in path)
+  url=$(echo "${url}" | grep "\.${ext}")
+
   # Ensure each link is on its own line
   url=$(echo "${url}" | sed -e "s/<a /\n<a /g")
 
