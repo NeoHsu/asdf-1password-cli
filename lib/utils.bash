@@ -77,9 +77,12 @@ download_release() {
   url=$(echo "${url}" | grep -o "https.*$")
 
   # Expect only one line
-  if [[ $(echo "$url" | wc -l | tr -d ' ') != 1 ]]; then
+  if [[ $(echo "$url" | wc -l | tr -d ' ') -gt 1 ]]; then
     echo "Unable to winnow down to a single URL:"
     echo "$url"
+    exit 1
+  elif [[ ${url} == "" ]]; then
+    echo "Failed to extract a URL for version ${version}"
     exit 1
   fi
 
