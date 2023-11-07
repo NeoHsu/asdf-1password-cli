@@ -46,10 +46,46 @@ download_release() {
   esac
 
   if [[ "$version" =~ ^1\..*$ ]]; then
-    url=$(curl -s https://app-updates.agilebits.com/product_history/CLI | grep "${version}" | grep "${filter_platform}" | grep "${arch}" | sed -e 's/<a /\n<a /g' | sed -e 's/<a .*href=['"'"'"]//' -e 's/["'"'"'].*$//' -e '/^$/ d' | sed '/^[[:space:]]*$/d' | grep -o "https.*$")
+    url=$(curl -s https://app-updates.agilebits.com/product_history/CLI)
   elif [[ "$version" =~ ^2\..*$ ]]; then
-    url=$(curl -s https://app-updates.agilebits.com/product_history/CLI2 | grep "${version}\/" | grep "${filter_platform}" | grep "${arch}" | sed -e 's/<a /\n<a /g' | sed -e 's/<a .*href=['"'"'"]//' -e 's/["'"'"'].*$//' -e '/^$/ d' | sed '/^[[:space:]]*$/d' | grep -o "https.*$")
+    url=$(curl -s https://app-updates.agilebits.com/product_history/CLI2)
   fi
+
+  # Limit to version ${version}/
+  url=$(echo "${url}" | grep "${version}\/")
+
+  # Limit to ${filter_platform}
+  url=$(echo "${url}" | grep "${filter_platform}")
+
+  # Limit to architecture ${arch}
+  url=$(echo "${url}" | grep "${arch}")
+
+  # Limit to trailing extension \.${ext} (not /${ext}/ in path)
+  url=$(echo "${url}" | grep "\.${ext}")
+
+  # Ensure each link is on its own line
+  # shellcheck disable=SC2001 # (bash 3.2.x parameter expansion can't handle newlines)
+  url=$(echo "${url}" | sed -e "s/<a /\n<a /g")
+
+  # Strip off HTML
+  url=$(echo "${url}" | sed -e 's/<a .*href=['"'"'"]//' -e 's/["'"'"'].*$//' -e '/^$/ d')
+
+  # Lose extraneous spaces
+  url=$(echo "${url}" | sed '/^[[:space:]]*$/d')
+
+  # Require HTTPS
+  url=$(echo "${url}" | grep -o "https.*$")
+
+  # Expect only one line
+  if [[ $(echo "$url" | wc -l | tr -d ' ') -gt 1 ]]; then
+    echo "Unable to winnow down to a single URL:"
+    echo "$url"
+    exit 1
+  elif [[ ${url} == "" ]]; then
+    echo "Failed to extract a URL for version ${version}"
+    exit 1
+  fi
+
   echo "* Downloading $TOOL_NAME release $version..."
   curl "${curl_opts[@]}" -o "$filename.${ext}" -C - "$url" || fail "Could not download $url"
 }
@@ -77,7 +113,7 @@ install_version() {
       *)
         cp -R "$ASDF_DOWNLOAD_PATH/." "$install_path/bin"
         is_exists=$(program_exists)
-        echo $is_exists
+        echo "$is_exists"
         if [ "$is_exists" != 0 ]; then
           gpg --keyserver hkps://keyserver.ubuntu.com:443 --receive-keys "$TOOL_GPG_KEY"
           gpg --verify "$install_path/bin/op.sig" "$install_path/bin/op" || fail "asdf-$TOOL_NAME download file verify fail with GPG."
