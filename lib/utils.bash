@@ -5,6 +5,7 @@ set -euo pipefail
 TOOL_NAME="1password-cli"
 TOOL_TEST="op --version"
 TOOL_GPG_KEY="3FEF9748469ADBE15DA7CA80AC2D62742012EA22"
+TOOL_GROUP="onepassword-cli"
 
 fail() {
   echo -e "asdf-$TOOL_NAME: $*"
@@ -117,6 +118,10 @@ install_version() {
         if [ "$is_exists" != 0 ]; then
           gpg --keyserver hkps://keyserver.ubuntu.com:443 --receive-keys "$TOOL_GPG_KEY"
           gpg --verify "$install_path/bin/op.sig" "$install_path/bin/op" || fail "asdf-$TOOL_NAME download file verify fail with GPG."
+        fi
+        if getent group "$TOOL_GROUP" > /dev/null; then
+            chgrp "$TOOL_GROUP" "$install_path/bin/op" && echo "Changed group of op executeable to $TOOL_GROUP"
+            chmod g+s "$install_path/bin/op" && "Set the setgid bit to the op executeable"
         fi
         ;;
     esac
