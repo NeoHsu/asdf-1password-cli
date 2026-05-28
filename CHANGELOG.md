@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2](https://github.com/NeoHsu/asdf-1password-cli/compare/v1.0.1...v1.0.2) (2026-05-28)
+
+
+### Bug Fixes
+
+* improve 1password-cli version and integration handling ([6f8fdc6](https://github.com/NeoHsu/asdf-1password-cli/commit/6f8fdc6610f9218b899b6b3bc5a2742c2f32ce57))
+* skip unsupported macos arm64 legacy test ([4d3c3f8](https://github.com/NeoHsu/asdf-1password-cli/commit/4d3c3f8e08422078f7c9acca619a95a7235db057))
+
 ### [1.0.1](https://www.github.com/NeoHsu/asdf-1password-cli/compare/v1.0.0...v1.0.1) (2021-08-11)
 
 
