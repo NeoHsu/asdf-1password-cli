@@ -63,11 +63,12 @@ resolve_version() {
 }
 
 download_release() {
-  local version filename url
+  local version filename url platform raw_arch arch ext filter_platform
   version="$1"
   filename="$2"
   platform=$(get_platform)
-  arch=$(get_arch)
+  raw_arch=$(get_arch)
+  arch=$raw_arch
   ext="zip"
   filter_platform=$platform
 
@@ -88,16 +89,16 @@ download_release() {
   fi
 
   # Limit to version ${version}/
-  url=$(echo "${url}" | grep "${version}\/")
+  url=$(echo "${url}" | grep "${version}\/" || true)
 
   # Limit to ${filter_platform}
-  url=$(echo "${url}" | grep "${filter_platform}")
+  url=$(echo "${url}" | grep "${filter_platform}" || true)
 
   # Limit to architecture ${arch}
-  url=$(echo "${url}" | grep "${arch}")
+  url=$(echo "${url}" | grep "${arch}" || true)
 
   # Limit to trailing extension \.${ext} (not /${ext}/ in path)
-  url=$(echo "${url}" | grep "\.${ext}")
+  url=$(echo "${url}" | grep "\.${ext}" || true)
 
   # Ensure each link is on its own line
   # shellcheck disable=SC2001 # (bash 3.2.x parameter expansion can't handle newlines)
@@ -110,7 +111,7 @@ download_release() {
   url=$(echo "${url}" | sed '/^[[:space:]]*$/d')
 
   # Require HTTPS
-  url=$(echo "${url}" | grep -o "https.*$")
+  url=$(echo "${url}" | grep -o "https.*$" || true)
 
   # Expect only one line
   if [[ $(echo "$url" | wc -l | tr -d ' ') -gt 1 ]]; then
@@ -118,11 +119,12 @@ download_release() {
     echo "$url"
     exit 1
   elif [[ ${url} == "" ]]; then
-    echo "Failed to extract a URL for version ${version}"
+    echo "Failed to extract a URL for version ${version} (${platform}/${raw_arch}, .${ext})"
     exit 1
   fi
 
   echo "* Downloading $TOOL_NAME release $version..."
+  rm -f "$filename.${ext}"
   curl "${curl_opts[@]}" -o "$filename.${ext}" -C - "$url" || fail "Could not download $url"
 }
 

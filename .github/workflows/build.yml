@@ -31,19 +31,30 @@ jobs:
           mv 1password-cli "${HOME}/.asdf/plugins/"
       - name: Run 1password-cli specific tests
         run: |
+          is_darwin_arm64=false
+          if [ "$(uname -s)" = "Darwin" ] && [ "$(uname -m)" = "arm64" ]; then
+            is_darwin_arm64=true
+          fi
+
           echo "Trying to list all versions of 1password-cli"
           asdf list all 1password-cli
-          echo "Will try to install 1password-cli 1.11.0 (Last version with amd64 for macOS)"
-          asdf install 1password-cli 1.11.0
+          if [ "$is_darwin_arm64" = false ]; then
+            echo "Will try to install 1password-cli 1.11.0 (Last version with amd64 for macOS)"
+            asdf install 1password-cli 1.11.0
+          else
+            echo "Skipping 1password-cli 1.11.0 because it does not provide a macOS arm64 or universal package"
+          fi
           echo "Will try to install 1password-cli 1.11.1 (First version with universal for macOS)"
           asdf install 1password-cli 1.11.1
           echo "Will try to install 1password-cli 2.0.0 (First 2.0 version)"
           asdf install 1password-cli 2.0.0
           echo "Will try to install 1password-cli 2.2.0 (First version with zip and pkg versions for macOS)"
           asdf install 1password-cli 2.2.0
-          echo "Setting 1password-cli version 1.11.0 as the default value in ~/.tool-versions"
-          echo '1password-cli 1.11.0' >~/.tool-versions
-          op --version 2>&1 | grep '1.11.0'
+          if [ "$is_darwin_arm64" = false ]; then
+            echo "Setting 1password-cli version 1.11.0 as the default value in ~/.tool-versions"
+            echo '1password-cli 1.11.0' >~/.tool-versions
+            op --version 2>&1 | grep '1.11.0'
+          fi
           echo "Setting 1password-cli version 1.11.1 as the default value in ~/.tool-versions"
           echo '1password-cli 1.11.1' >~/.tool-versions
           op --version 2>&1 | grep '1.11.1'
