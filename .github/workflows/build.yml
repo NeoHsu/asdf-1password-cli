@@ -18,17 +18,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: asdf_plugin_test
-        uses: asdf-vm/actions/plugin-test@v2
+        uses: asdf-vm/actions/plugin-test@v4
         with:
           command: op --version
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: 1password-cli
       - name: Move 1password-cli plugin to plugins dir
         run: |
-          mkdir -p ${HOME}/.asdf/plugins/
-          mv 1password-cli ${HOME}/.asdf/plugins/
+          mkdir -p "${HOME}/.asdf/plugins/"
+          mv 1password-cli "${HOME}/.asdf/plugins/"
       - name: Run 1password-cli specific tests
         run: |
           echo "Trying to list all versions of 1password-cli"
@@ -42,14 +42,14 @@ jobs:
           echo "Will try to install 1password-cli 2.2.0 (First version with zip and pkg versions for macOS)"
           asdf install 1password-cli 2.2.0
           echo "Setting 1password-cli version 1.11.0 as the default value in ~/.tool-versions"
-          echo '1password-cli 1.11.0' > ~/.tool-versions
+          echo '1password-cli 1.11.0' >~/.tool-versions
           op --version 2>&1 | grep '1.11.0'
           echo "Setting 1password-cli version 1.11.1 as the default value in ~/.tool-versions"
-          echo '1password-cli 1.11.1' > ~/.tool-versions
+          echo '1password-cli 1.11.1' >~/.tool-versions
           op --version 2>&1 | grep '1.11.1'
           echo "Setting 1password-cli version 2.0.0 as the default value in ~/.tool-versions"
-          echo '1password-cli 2.0.0' > ~/.tool-versions
+          echo '1password-cli 2.0.0' >~/.tool-versions
           op --version 2>&1 | grep '2.0.0'
           echo "Setting 1password-cli version 2.2.0 as the default value in ~/.tool-versions"
-          echo '1password-cli 2.2.0' > ~/.tool-versions
+          echo '1password-cli 2.2.0' >~/.tool-versions
           op --version 2>&1 | grep '2.2.0'

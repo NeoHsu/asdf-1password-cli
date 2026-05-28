@@ -7,11 +7,13 @@ source "$(dirname "$0")/../lib/utils.bash"
 
 mkdir -p "$ASDF_DOWNLOAD_PATH"
 
+resolved_version=$(resolve_version "$ASDF_INSTALL_VERSION")
+
 # This to proper extension and adapt extracting strategy.
-release_file="$ASDF_DOWNLOAD_PATH/$TOOL_NAME-$ASDF_INSTALL_VERSION"
+release_file="$ASDF_DOWNLOAD_PATH/$TOOL_NAME-$resolved_version"
 
 # Download installer file to the download directory
-download_release "$ASDF_INSTALL_VERSION" "$release_file"
+download_release "$resolved_version" "$release_file"
 
 platform=$(get_platform)
 if [ "$platform" != "darwin" ]; then

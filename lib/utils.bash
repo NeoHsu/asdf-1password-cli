@@ -5,6 +5,7 @@ set -euo pipefail
 TOOL_NAME="1password-cli"
 TOOL_TEST="op --version"
 TOOL_GPG_KEY="3FEF9748469ADBE15DA7CA80AC2D62742012EA22"
+TOOL_GROUP="onepassword-cli"
 
 fail() {
   echo -e "asdf-$TOOL_NAME: $*"
@@ -20,12 +21,45 @@ sort_versions() {
 
 list_all_versions() {
   cat \
-    <(curl -s https://app-updates.agilebits.com/product_history/CLI |
+    <(curl "${curl_opts[@]}" https://app-updates.agilebits.com/product_history/CLI |
       sed -n '/<h3/{n;p;}' |
       sed 's/[[:space:]]//g') \
-    <(curl -s https://app-updates.agilebits.com/product_history/CLI2 |
+    <(curl "${curl_opts[@]}" https://app-updates.agilebits.com/product_history/CLI2 |
       sed -n '/<h3/{n;p;}' |
       sed 's/[[:space:]]//g')
+}
+
+latest_stable_version() {
+  local query="${1:-}"
+  local latest=""
+
+  while IFS= read -r version; do
+    [ -z "$version" ] && continue
+    [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || continue
+    if [ -n "$query" ] && [ "${version#"$query"}" = "$version" ]; then
+      continue
+    fi
+    latest="$version"
+  done < <(list_all_versions | sort_versions)
+
+  [ -n "$latest" ] || fail "No stable version found matching '${query}'"
+  printf "%s\n" "$latest"
+}
+
+resolve_version() {
+  local version="$1"
+
+  case "$version" in
+    latest)
+      latest_stable_version
+      ;;
+    latest:*)
+      latest_stable_version "${version#latest:}"
+      ;;
+    *)
+      printf "%s\n" "$version"
+      ;;
+  esac
 }
 
 download_release() {
@@ -46,9 +80,11 @@ download_release() {
   esac
 
   if [[ "$version" =~ ^1\..*$ ]]; then
-    url=$(curl -s https://app-updates.agilebits.com/product_history/CLI)
+    url=$(curl "${curl_opts[@]}" https://app-updates.agilebits.com/product_history/CLI)
   elif [[ "$version" =~ ^2\..*$ ]]; then
-    url=$(curl -s https://app-updates.agilebits.com/product_history/CLI2)
+    url=$(curl "${curl_opts[@]}" https://app-updates.agilebits.com/product_history/CLI2)
+  else
+    fail "Unsupported $TOOL_NAME version '$version'"
   fi
 
   # Limit to version ${version}/
@@ -99,24 +135,27 @@ install_version() {
     fail "asdf-$TOOL_NAME supports release installs only"
   fi
 
+  local resolved_version
+  resolved_version=$(resolve_version "$version")
+
   (
     platform=$(get_platform)
     mkdir -p "$install_path/bin"
     case $platform in
       darwin)
         ext="pkg"
-        pkgutil --expand "${ASDF_DOWNLOAD_PATH}/${TOOL_NAME}-${ASDF_INSTALL_VERSION}.${ext}" "${ASDF_DOWNLOAD_PATH}/extracted/"
+        pkgutil --expand "${ASDF_DOWNLOAD_PATH}/${TOOL_NAME}-${resolved_version}.${ext}" "${ASDF_DOWNLOAD_PATH}/extracted/"
         pushd "$install_path/bin"
         cpio -i -F "${ASDF_DOWNLOAD_PATH}/extracted/op.${ext}/Payload" 2>/dev/null
         popd
         ;;
       *)
         cp -R "$ASDF_DOWNLOAD_PATH/." "$install_path/bin"
-        is_exists=$(program_exists)
-        echo "$is_exists"
-        if [ "$is_exists" != 0 ]; then
-          gpg --keyserver hkps://keyserver.ubuntu.com:443 --receive-keys "$TOOL_GPG_KEY"
-          gpg --verify "$install_path/bin/op.sig" "$install_path/bin/op" || fail "asdf-$TOOL_NAME download file verify fail with GPG."
+        chmod +x "$install_path/bin/op"
+        set_onepassword_group_permissions "$install_path/bin/op"
+        if gpg_cmd=$(get_gpg_command); then
+          "$gpg_cmd" --keyserver hkps://keyserver.ubuntu.com:443 --receive-keys "$TOOL_GPG_KEY"
+          "$gpg_cmd" --verify "$install_path/bin/op.sig" "$install_path/bin/op" || fail "asdf-$TOOL_NAME download file verify fail with GPG."
         fi
         ;;
     esac
@@ -125,10 +164,10 @@ install_version() {
     tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
     test -x "$install_path/bin/$tool_cmd" || fail "Expected $install_path/bin/$tool_cmd to be executable."
 
-    echo "$TOOL_NAME $version installation was successful!"
+    echo "$TOOL_NAME $resolved_version installation was successful!"
   ) || (
     rm -rf "$install_path"
-    fail "An error ocurred while installing $TOOL_NAME $version."
+    fail "An error ocurred while installing $TOOL_NAME $resolved_version."
   )
 }
 
@@ -166,12 +205,35 @@ get_platform() {
 }
 
 program_exists() {
-  local ret='0'
-  command -v gpg gpg2 >/dev/null 2>&1 || { local ret='1'; }
+  command -v "$1" >/dev/null 2>&1
+}
 
-  if [ "$ret" -ne 0 ]; then
+get_gpg_command() {
+  if program_exists gpg; then
+    printf "%s\n" "gpg"
+  elif program_exists gpg2; then
+    printf "%s\n" "gpg2"
+  else
     return 1
   fi
+}
 
-  return 0
+set_onepassword_group_permissions() {
+  local executable="$1"
+
+  if ! program_exists getent; then
+    return 0
+  fi
+
+  if getent group "$TOOL_GROUP" >/dev/null 2>&1; then
+    if ! chgrp "$TOOL_GROUP" "$executable" 2>/dev/null; then
+      echo "Could not change group of $executable to $TOOL_GROUP. Run the README app integration commands with sudo if needed." >&2
+      return 0
+    fi
+    if ! chmod g+s "$executable" 2>/dev/null; then
+      echo "Could not set setgid bit on $executable. Run the README app integration commands with sudo if needed." >&2
+      return 0
+    fi
+    echo "Set $TOOL_GROUP group permissions on $executable"
+  fi
 }
